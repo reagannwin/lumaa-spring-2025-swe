@@ -1,114 +1,126 @@
-import React, { useEffect, useState } from "react";
-import api from "../services/api";
-import { isAuthenticated } from "../utils/auth";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { getErrorMessage, tasksApi } from "../api";
+import type { Task, TaskChanges } from "../types";
+import TaskItem from "./TaskItem";
 
-
-interface Task {
-    id: number;
-    title: string;
-    description: string;
-    isComplete: boolean;
-}
-
-const Tasks: React.FC = () => {
+const Tasks = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [newTaskTitle, setNewTaskTitle] = useState("");
-    const [newTaskDescription, setNewTaskDescription] = useState("");
-    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    const [newTitle, setNewTitle] = useState("");
+    const [newDescription, setNewDescription] = useState("");
+    const [isCreating, setIsCreating] = useState(false);
+
+    const loadTasks = useCallback(async () => {
+        setIsLoading(true);
+        setError("");
+        try {
+            setTasks(await tasksApi.list());
+        } catch (err) {
+            setError(getErrorMessage(err, "Couldn't load your tasks"));
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        if (!isAuthenticated()) {
-            navigate("/login");
-        } else {
-            fetchTasks();
-        }
-    }, [navigate]);
+        loadTasks();
+    }, [loadTasks]);
 
-    // Fetch all tasks
-    const fetchTasks = async () => {
-        try {
-            const response = await api.get("/tasks");
-            setTasks(response.data);
-        } catch (err) {
-            console.error("Failed to fetch tasks", err);
-        }
-    };
-
-    // Create a new task
-    const createTask = async (e: React.FormEvent) => {
+    const createTask = async (e: FormEvent) => {
         e.preventDefault();
+        setIsCreating(true);
+        setError("");
         try {
-            const response = await api.post("/tasks", {
-                title: newTaskTitle,
-                description: newTaskDescription,
-            });
-            setTasks([...tasks, response.data]);
-            setNewTaskTitle("");
-            setNewTaskDescription("");
+            const task = await tasksApi.create(newTitle.trim(), newDescription.trim());
+            setTasks((current) => [...current, task]);
+            setNewTitle("");
+            setNewDescription("");
         } catch (err) {
-            console.error("Failed to create task", err);
+            setError(getErrorMessage(err, "Couldn't create the task"));
+        } finally {
+            setIsCreating(false);
         }
     };
 
-    // Mark a task as complete/incomplete
-    const toggleComplete = async (id: number, isComplete: boolean) => {
+    const updateTask = async (id: number, changes: TaskChanges) => {
+        setError("");
         try {
-            const response = await api.put(`/tasks/${id}`, { isComplete: !isComplete });
-            setTasks(tasks.map((task) => (task.id === id ? response.data : task)));
+            const updated = await tasksApi.update(id, changes);
+            setTasks((current) => current.map((task) => (task.id === id ? updated : task)));
         } catch (err) {
-            console.error("Failed to update task", err);
+            setError(getErrorMessage(err, "Couldn't update the task"));
+            throw err;
         }
     };
 
-    // Delete a task
     const deleteTask = async (id: number) => {
+        setError("");
         try {
-            await api.delete(`/tasks/${id}`);
-            setTasks(tasks.filter((task) => task.id !== id));
+            await tasksApi.remove(id);
+            setTasks((current) => current.filter((task) => task.id !== id));
         } catch (err) {
-            console.error("Failed to delete task", err);
+            setError(getErrorMessage(err, "Couldn't delete the task"));
         }
     };
+
+    const remaining = tasks.filter((task) => !task.isComplete).length;
 
     return (
-        <div>
-            <h2>Tasks</h2>
+        <section className="card">
+            <h1>Your tasks</h1>
 
-            {/* Form to create a new task */}
-            <form onSubmit={createTask}>
+            <form onSubmit={createTask} className="stack new-task">
                 <input
-                    type="text"
-                    placeholder="Title"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    aria-label="New task title"
+                    placeholder="What needs doing?"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    maxLength={255}
                     required
                 />
-                <input
-                    type="text"
-                    placeholder="Description"
-                    value={newTaskDescription}
-                    onChange={(e) => setNewTaskDescription(e.target.value)}
+                <textarea
+                    aria-label="New task description"
+                    placeholder="Details (optional)"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    maxLength={2000}
+                    rows={2}
                 />
-                <button type="submit">Add Task</button>
+                <button type="submit" className="primary" disabled={isCreating || !newTitle.trim()}>
+                    {isCreating ? "Adding..." : "Add task"}
+                </button>
             </form>
 
-            {/* List of tasks */}
-            <ul>
-                {tasks.map((task) => (
-                    <li key={task.id}>
-                        <h3 style={{ textDecoration: task.isComplete ? "line-through" : "none" }}>
-                            {task.title}
-                        </h3>
-                        <p>{task.description}</p>
-                        <button onClick={() => toggleComplete(task.id, task.isComplete)}>
-                            {task.isComplete ? "Mark Incomplete" : "Mark Complete"}
-                        </button>
-                        <button onClick={() => deleteTask(task.id)}>Delete</button>
-                    </li>
-                ))}
-            </ul>
-        </div>
+            {error && (
+                <p className="error" role="alert">
+                    {error}
+                </p>
+            )}
+
+            {isLoading ? (
+                <p className="muted">Loading...</p>
+            ) : tasks.length === 0 ? (
+                <p className="muted">No tasks yet. Add your first one above.</p>
+            ) : (
+                <>
+                    <p className="muted">
+                        {remaining} of {tasks.length} remaining
+                    </p>
+                    <ul className="task-list">
+                        {tasks.map((task) => (
+                            <TaskItem
+                                key={task.id}
+                                task={task}
+                                onUpdate={updateTask}
+                                onDelete={deleteTask}
+                            />
+                        ))}
+                    </ul>
+                </>
+            )}
+        </section>
     );
 };
 

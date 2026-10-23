@@ -1,22 +1,30 @@
 import pool from "../db";
-import bcrypt from "bcryptjs";
 
-class User {
-    static async create(username: string, password: string) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const result = await pool.query(
-            "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
-            [username, hashedPassword]
-        );
-        return result.rows[0];
-    }
-
-    static async findByUsername(username: string) {
-        const result = await pool.query("SELECT * FROM users WHERE username = $1", [
-            username,
-        ]);
-        return result.rows[0];
-    }
+export interface User {
+    id: number;
+    username: string;
 }
 
-export default User;
+interface UserRow {
+    id: number;
+    username: string;
+    password_hash: string;
+}
+
+export const UserModel = {
+    async create(username: string, passwordHash: string): Promise<User> {
+        const { rows } = await pool.query<User>(
+            "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username",
+            [username, passwordHash]
+        );
+        return rows[0];
+    },
+
+    async findByUsername(username: string): Promise<UserRow | undefined> {
+        const { rows } = await pool.query<UserRow>(
+            "SELECT id, username, password_hash FROM users WHERE username = $1",
+            [username]
+        );
+        return rows[0];
+    },
+};
