@@ -1,23 +1,18 @@
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import authRouter from "./routes/auth";
+import { createApp } from "./app";
+import { config } from "./config";
+import pool from "./db";
 
-dotenv.config();
+const app = createApp();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-
-// Routes
-app.use("/auth", authRouter);
-
-app.get("/", (req, res) => {
-    res.send("Backend is running!");
+const server = app.listen(config.port, () => {
+    console.log(`Server is running on http://localhost:${config.port}`);
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+const shutdown = () => {
+    server.close(() => {
+        pool.end().finally(() => process.exit(0));
+    });
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

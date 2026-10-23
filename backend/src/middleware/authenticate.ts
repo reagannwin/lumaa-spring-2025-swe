@@ -1,20 +1,45 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { config } from "../config";
+
+declare global {
+    namespace Express {
+        interface Request {
+            userId?: number;
+        }
+    }
+}
+
+interface TokenPayload {
+    userId: number;
+}
 
 const authenticate = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    const header = req.header("Authorization");
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 
     if (!token) {
-        return res.status(401).json({ message: "Access denied" });
+        return res.status(401).json({ message: "Authentication required" });
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
-        (req as any).userId = (decoded as any).userId;
+        const payload = jwt.verify(token, config.jwtSecret, { algorithms: ["HS256"] }) as TokenPayload;
+        if (typeof payload.userId !== "number") {
+            return res.status(401).json({ message: "Invalid token" });
+        }
+        req.userId = payload.userId;
         next();
-    } catch (err) {
-        res.status(400).json({ message: "Invalid token" });
+    } catch {
+        return res.status(401).json({ message: "Invalid or expired token" });
     }
+};
+
+/** For handlers behind `authenticate`, where userId is always set. */
+export const requireUserId = (req: Request): number => {
+    if (req.userId === undefined) {
+        throw new Error("requireUserId called on a route without authenticate middleware");
+    }
+    return req.userId;
 };
 
 export default authenticate;
