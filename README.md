@@ -2,7 +2,7 @@
 
 A full stack task manager: users register, log in, and manage their own list of tasks. Built with React and TypeScript on the frontend, an Express and TypeScript API on the backend, and PostgreSQL for storage.
 
-This started as my submission for the Lumaa Spring 2025 full stack coding challenge. The original submission is preserved at the [`submission-2025-02`](../../tree/submission-2025-02) tag. The code on `main` has since been fixed and cleaned up (see [What changed after the submission](#what-changed-after-the-submission)).
+This started as my submission for the Lumaa Spring 2025 full stack coding challenge. The original submission is preserved on the [`submission-2025-02`](../../tree/submission-2025-02) branch. The code on `main` has since been fixed and cleaned up (see [What changed after the submission](#what-changed-after-the-submission)).
 
 ## Features
 
