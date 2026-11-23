@@ -1,22 +1,33 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { isAuthenticated, logout } from "../utils/auth";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/useAuth";
 
-const Navbar: React.FC = () => {
+const Navbar = () => {
+    const { isAuthenticated, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate("/login");
+    };
+
     return (
-        <nav>
-            <Link to="/">Home</Link>
-            {isAuthenticated() ? (
-                <>
-                    <Link to="/tasks">Tasks</Link> {/* Add this line */}
-                    <button onClick={logout}>Logout</button>
-                </>
-            ) : (
-                <>
-                    <Link to="/login">Login</Link>
-                    <Link to="/register">Register</Link>
-                </>
-            )}
+        <nav className="navbar">
+            <span className="brand">Task Manager</span>
+            <div className="nav-links">
+                {isAuthenticated ? (
+                    <>
+                        <NavLink to="/tasks">Tasks</NavLink>
+                        <button type="button" className="link-button" onClick={handleLogout}>
+                            Logout
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <NavLink to="/login">Login</NavLink>
+                        <NavLink to="/register">Register</NavLink>
+                    </>
+                )}
+            </div>
         </nav>
     );
 };

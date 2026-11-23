@@ -1,21 +1,30 @@
-import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Navbar from "./components/Navbar";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthProvider";
+import { ProtectedRoute, PublicOnlyRoute } from "./auth/RouteGuards";
 import Login from "./components/Login";
+import Navbar from "./components/Navbar";
 import Register from "./components/Register";
 import Tasks from "./components/Tasks";
 
-const App: React.FC = () => {
+const App = () => {
     return (
-        <Router>
-            <Navbar />
-            <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/" element={<h1>Welcome to the Task Manager</h1>} />
-            </Routes>
-        </Router>
+        <AuthProvider>
+            <BrowserRouter>
+                <Navbar />
+                <main className="container">
+                    <Routes>
+                        <Route element={<PublicOnlyRoute />}>
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/register" element={<Register />} />
+                        </Route>
+                        <Route element={<ProtectedRoute />}>
+                            <Route path="/tasks" element={<Tasks />} />
+                        </Route>
+                        <Route path="*" element={<Navigate to="/tasks" replace />} />
+                    </Routes>
+                </main>
+            </BrowserRouter>
+        </AuthProvider>
     );
 };
 

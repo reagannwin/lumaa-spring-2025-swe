@@ -2,11 +2,14 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Backend for Task Manager App",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
-    "build": "tsc",
-    "dev": "ts-node-dev src/index.ts"
+    "db:migrate": "ts-node src/db/migrate.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,9 +26,14 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.11.11",
-    "nodemon": "^3.0.2",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.3.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.7"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
